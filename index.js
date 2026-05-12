@@ -236,7 +236,7 @@ client.on('interactionCreate', async (interaction) => {
         timbrature.forEach(t => {
           if (t.azione === 'IN') {
             if (!inServizio[t.userId]) {
-              inServizio[t.userId] = { userName: t.userName, entrataTime: new Date(t.timestamp) };
+              inServizio[t.userId] = { userName: t.userName, userTag: t.userTag, entrataTime: new Date(t.timestamp) };
             }
           } else if (t.azione === 'OUT') {
             delete inServizio[t.userId];
@@ -244,7 +244,7 @@ client.on('interactionCreate', async (interaction) => {
         });
 
         const elenco = Object.entries(inServizio)
-          .map(([id, data]) => `🟢 ${data.userName}`)
+          .map(([id, data]) => `🟢 <@${id}> (${data.userTag})`)
           .join('\n') || 'Nessuno in servizio';
 
         const embed = createEmbed('👥 Chi è in Servizio', elenco, '#00ff00');
@@ -419,8 +419,8 @@ client.on('interactionCreate', async (interaction) => {
         const stock = db.getAllStock();
 
         const embed = createEmbed(
-          isRimetti ? '✅ Oggetto Rimesso' : '✅ Oggetto Preso',
-          `Hai ${isRimetti ? 'rimesso' : 'preso'} **${quantita}** ${nomeProdotto}${quantita > 1 ? '(e)' : ''}.\n\n` +
+          `✅ ${interaction.user.tag} ha ${isRimetti ? 'rimesso' : 'preso'} ${quantita} ${nomeProdotto}${quantita > 1 ? '(e)' : ''}`,
+          `**Utente:** <@${interaction.user.id}> (${interaction.user.tag})\n\n` +
           `**Adesso lo stack è:**\n🩺 Medikit: ${stock.medikit}\n🩹 Bende: ${stock.sole_bende}`,
           isRimetti ? '#00ff00' : '#ffcc00'
         );
@@ -466,8 +466,8 @@ client.on('interactionCreate', async (interaction) => {
         const stock = db.getAllStockDispensa();
 
         const embed = createEmbed(
-          isRimetti ? '✅ Stock Rimesso' : '✅ Stock Prelevato',
-          `Hai ${isRimetti ? 'rimesso' : 'prelevato'} **${quantita}** ${nomeProdotto}${quantita > 1 ? '(e)' : ''}.\n\n` +
+          `✅ ${interaction.user.tag} ha ${isRimetti ? 'rimesso' : 'prelevato'} ${quantita} ${nomeProdotto}${quantita > 1 ? '(e)' : ''}`,
+          `**Utente:** <@${interaction.user.id}> (${interaction.user.tag})\n\n` +
           `**Adesso lo stock dispensa è:**\n🥤 Bevande: ${stock.bevande}\n🍽️ Cibo: ${stock.cibo}`,
           isRimetti ? '#00ff00' : '#ffcc00'
         );
@@ -494,8 +494,9 @@ client.on('interactionCreate', async (interaction) => {
 
         // Mostra recap della vendita e apri modulo fattura
         const embed = createEmbed(
-          '✅ Vendita Registrata',
+          `✅ ${interaction.user.tag} ha registrato la vendita`,
           `**ID Vendita:** \`${vendita.id}\`
+**Utente:** <@${interaction.user.id}> (${interaction.user.tag})
 **Articolo:** ${cosa}
 **Prezzo:** €${prezzo}
 **Convenzione:** ${convenzione}
@@ -568,7 +569,7 @@ Adesso compila i dati della fattura.`,
               .setTitle('📄 Nuova Fattura')
               .setDescription(`**Numero Fattura:** ${numeroFattura}\n**ID Fattura Sistema:** \`${fattura.id}\``)
               .addFields(
-                { name: '👤 Venditore', value: interaction.user.username },
+                { name: '👤 Venditore', value: `<@${interaction.user.id}> (${interaction.user.tag})` },
                 { name: '📦 Articolo', value: vendita.cosa },
                 { name: '💰 Prezzo', value: `€${vendita.prezzo}` },
                 { name: '🏢 Società', value: vendita.societa || 'N/A' },
@@ -585,8 +586,8 @@ Adesso compila i dati della fattura.`,
 
         // Mostra conferma
         const embed = createEmbed(
-          '✅ Fattura Completata',
-          `**Numero Fattura:** ${numeroFattura}\n**Fattura ID:** \`${fattura.id}\`\n**Articolo:** ${vendita.cosa}\n**Prezzo:** €${vendita.prezzo}\n\nLa fattura è stata registrata e inviata nel canale fatture.`,
+          `✅ ${interaction.user.tag} ha completato la fattura`,
+          `**Utente:** <@${interaction.user.id}> (${interaction.user.tag})\n**Numero Fattura:** ${numeroFattura}\n**Fattura ID:** \`${fattura.id}\`\n**Articolo:** ${vendita.cosa}\n**Prezzo:** €${vendita.prezzo}\n\nLa fattura è stata registrata e inviata nel canale fatture.`,
           '#00ff00'
         );
         await interaction.reply({ embeds: [embed], ephemeral: false });
