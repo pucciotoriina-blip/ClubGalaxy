@@ -328,9 +328,8 @@ async function handleCommands(interaction) {
       const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio);
 
       const embed = createEmbed(
-        '🎫 CARTELLINO - BOT GALAZY',
-        '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le statistiche.\n' +
-        'Usa il comando `/magazzino` per vedere lo stock EMS e `/dispensa` per vedere bevande e cibo.',
+        '🎫 CARTELLINO - BOT EMS',
+        '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le statistiche.\n',
         '#FFD700'
       )
         .addFields(
@@ -410,14 +409,39 @@ async function handleCommands(interaction) {
 
     // ===== /dispensa =====
     if (command === 'dispensa') {
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
       const stock = db.getAllStockDispensa();
+
+      const btnPrendiBevande = new ButtonBuilder()
+        .setCustomId('disp_prendi_bevande')
+        .setLabel('🥤 Prendi Bevande')
+        .setStyle(ButtonStyle.Secondary);
+
+      const btnRimettiBevande = new ButtonBuilder()
+        .setCustomId('disp_rimetti_bevande')
+        .setLabel('🥤 Rimetti Bevande')
+        .setStyle(ButtonStyle.Success);
+
+      const btnPrendiCibo = new ButtonBuilder()
+        .setCustomId('disp_prendi_cibo')
+        .setLabel('🍽️ Prendi Cibo')
+        .setStyle(ButtonStyle.Secondary);
+
+      const btnRimettiCibo = new ButtonBuilder()
+        .setCustomId('disp_rimetti_cibo')
+        .setLabel('🍽️ Rimetti Cibo')
+        .setStyle(ButtonStyle.Success);
+
+      const row1 = new ActionRowBuilder().addComponents(btnPrendiBevande, btnRimettiBevande);
+      const row2 = new ActionRowBuilder().addComponents(btnPrendiCibo, btnRimettiCibo);
+
       const embed = createEmbed(
         '🥫 Dispensa',
         `**🥤 Bevande:** ${stock.bevande}\n` +
         `**🍽️ Cibo:** ${stock.cibo}`,
         '#8e44ad'
       );
-      return interaction.reply({ embeds: [embed], ephemeral: false });
+      return interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: false });
     }
 
     // ===== /mettistockdispensa =====

@@ -224,7 +224,11 @@ client.on('interactionCreate', async (interaction) => {
       // Magazzino - Prendi/Rimetti Oggetto
       if (interaction.customId.startsWith('mag_prendi_') || interaction.customId.startsWith('mag_rimetti_')) {
         const prodotto = interaction.customId.replace('mag_prendi_', '').replace('mag_rimetti_', '');
-        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Bende';
+        const nomeProdotti = {
+          medikit: 'Medikit',
+          sole_bende: 'Bende'
+        };
+        const nomeProdotto = nomeProdotti[prodotto] || prodotto;
         const isRimetti = interaction.customId.startsWith('mag_rimetti_');
 
         const modal = new ModalBuilder()
@@ -233,6 +237,31 @@ client.on('interactionCreate', async (interaction) => {
 
         const quantitaInput = new TextInputBuilder()
           .setCustomId('quantita_magazzino')
+          .setLabel(`Quantità da ${isRimetti ? 'rimettere' : 'prendere'}`)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
+
+        const row = new ActionRowBuilder().addComponents(quantitaInput);
+        modal.addComponents(row);
+        await interaction.showModal(modal);
+      }
+
+      // Dispensa - Prendi/Rimetti Oggetto
+      if (interaction.customId.startsWith('disp_prendi_') || interaction.customId.startsWith('disp_rimetti_')) {
+        const prodotto = interaction.customId.replace('disp_prendi_', '').replace('disp_rimetti_', '');
+        const nomeProdotti = {
+          bevande: 'Bevande',
+          cibo: 'Cibo'
+        };
+        const nomeProdotto = nomeProdotti[prodotto] || prodotto;
+        const isRimetti = interaction.customId.startsWith('disp_rimetti_');
+
+        const modal = new ModalBuilder()
+          .setCustomId(`modal_dispensa_${isRimetti ? 'rimetti' : 'prendi'}_${prodotto}`)
+          .setTitle(`${isRimetti ? 'Rimetti' : 'Prendi'} ${nomeProdotto}`);
+
+        const quantitaInput = new TextInputBuilder()
+          .setCustomId('quantita_dispensa')
           .setLabel(`Quantità da ${isRimetti ? 'rimettere' : 'prendere'}`)
           .setStyle(TextInputStyle.Short)
           .setRequired(true);
@@ -253,7 +282,11 @@ client.on('interactionCreate', async (interaction) => {
         const [_, operazione, prodotto] = interaction.customId.split('_');
         const isRimetti = operazione === 'rimetti';
         const quantita = parseInt(interaction.fields.getTextInputValue('quantita_magazzino'));
-        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Bende';
+        const nomeProdotti = {
+          medikit: 'Medikit',
+          sole_bende: 'Bende'
+        };
+        const nomeProdotto = nomeProdotti[prodotto] || prodotto;
 
         if (isNaN(quantita) || quantita <= 0) {
           const embed = createEmbed(
@@ -282,6 +315,49 @@ client.on('interactionCreate', async (interaction) => {
           isRimetti ? '✅ Oggetto Rimesso' : '✅ Oggetto Preso',
           `Hai ${isRimetti ? 'rimesso' : 'preso'} **${quantita}** ${nomeProdotto}${quantita > 1 ? '(e)' : ''}.\n\n` +
           `**Adesso lo stack è:**\n🩺 Medikit: ${stock.medikit}\n🩹 Bende: ${stock.sole_bende}`,
+          isRimetti ? '#00ff00' : '#ffcc00'
+        );
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      if (interaction.customId.startsWith('modal_dispensa_')) {
+        const [_, operazione, prodotto] = interaction.customId.split('_');
+        const isRimetti = operazione === 'rimetti';
+        const quantita = parseInt(interaction.fields.getTextInputValue('quantita_dispensa'));
+        const nomeProdotti = {
+          bevande: 'Bevande',
+          cibo: 'Cibo'
+        };
+        const nomeProdotto = nomeProdotti[prodotto] || prodotto;
+
+        if (isNaN(quantita) || quantita <= 0) {
+          const embed = createEmbed(
+            '❌ Errore',
+            'Inserisci una quantità valida (numero positivo)',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        const stockAttuale = db.getStockDispensa(prodotto);
+
+        if (!isRimetti && stockAttuale < quantita) {
+          const embed = createEmbed(
+            '❌ Stock Insufficiente',
+            `Non ci sono abbastanza ${nomeProdotto.toLowerCase()}. Disponibili: ${stockAttuale}`,
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        const nuovoStock = isRimetti ? db.aggiungiStockDispensa(prodotto, quantita) : db.togliStockDispensa(prodotto, quantita);
+        const stock = db.getAllStockDispensa();
+
+        const embed = createEmbed(
+          isRimetti ? '✅ Stock Rimesso' : '✅ Stock Prelevato',
+          `Hai ${isRimetti ? 'rimesso' : 'prelevato'} **${quantita}** ${nomeProdotto}${quantita > 1 ? '(e)' : ''}.\n\n` +
+          `**Adesso lo stock dispensa è:**\n🥤 Bevande: ${stock.bevande}\n🍽️ Cibo: ${stock.cibo}`,
           isRimetti ? '#00ff00' : '#ffcc00'
         );
 
