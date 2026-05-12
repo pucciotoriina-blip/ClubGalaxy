@@ -1,0 +1,11 @@
+{
+  "timbrature": [],
+  "vendite": [],
+  "magazzino": {
+    "cibo": 0,
+    "bevanda": 0,
+    "gratta_e_vinci": 0,
+    "alcolici": 0
+  },
+  "fatture": []
+}
