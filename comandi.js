@@ -116,18 +116,16 @@ commands.push(
 
 commands.push(
   new SlashCommandBuilder()
-    .setName('riforniscimagazzino')
-    .setDescription('Aggiungi stock al magazzino')
+    .setName('aggiornastack')
+    .setDescription('Aggiorna lo stock EMS nel magazzino')
     .addStringOption(option =>
       option
         .setName('prodotto')
-        .setDescription('Tipo di prodotto')
+        .setDescription('Oggetto EMS')
         .setRequired(true)
         .addChoices(
-          { name: 'Cibo', value: 'cibo' },
-          { name: 'Bevanda', value: 'bevanda' },
-          { name: 'Gratta e Vinci', value: 'gratta_e_vinci' },
-          { name: 'Alcolici', value: 'alcolici' }
+          { name: 'Medikit', value: 'medikit' },
+          { name: 'Sole Bende', value: 'sole_bende' }
         )
     )
     .addIntegerOption(option =>
@@ -140,23 +138,21 @@ commands.push(
 );
 
 // ============================================
-// COMANDO: /levastock (Solo Direttore/CEO)
+// COMANDO: /tolgiestock (Solo Direttore/CEO)
 // ============================================
 
 commands.push(
   new SlashCommandBuilder()
-    .setName('levastock')
-    .setDescription('Rimuovi stock dal magazzino')
+    .setName('tolgiestock')
+    .setDescription('Rimuovi stock EMS dal magazzino')
     .addStringOption(option =>
       option
         .setName('prodotto')
-        .setDescription('Tipo di prodotto')
+        .setDescription('Oggetto EMS')
         .setRequired(true)
         .addChoices(
-          { name: 'Cibo', value: 'cibo' },
-          { name: 'Bevanda', value: 'bevanda' },
-          { name: 'Gratta e Vinci', value: 'gratta_e_vinci' },
-          { name: 'Alcolici', value: 'alcolici' }
+          { name: 'Medikit', value: 'medikit' },
+          { name: 'Sole Bende', value: 'sole_bende' }
         )
     )
     .addIntegerOption(option =>
@@ -261,18 +257,24 @@ async function handleCommands(interaction) {
         .setLabel('👥 Servizio')
         .setStyle(ButtonStyle.Primary);
 
-      const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio);
+      const btnMagazzino = new ButtonBuilder()
+        .setCustomId('btn_magazzino')
+        .setLabel('📦 Magazzino')
+        .setStyle(ButtonStyle.Primary);
+
+      const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio, btnMagazzino);
 
       const embed = createEmbed(
         '🎫 CARTELLINO - BOT GALAZY',
-        '**Benvenuto Barista/Security/Ballerina**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le info.\n' +
-        'Le vendite e il magazzino si gestiscono con i comandi `/registrovendite` e `/magazzino`.',
+        '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura, le statistiche e il magazzino EMS.\n' +
+        'Premi **Magazzino** per prendere o rimettere medikit e sole bende.',
         '#FFD700'
       )
         .addFields(
           { name: '⏱️ Timbratura', value: 'Registra entrata e uscita dal servizio' },
           { name: '📊 Info', value: 'Visualizza le tue statistiche' },
-          { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' }
+          { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' },
+          { name: '📦 Magazzino', value: 'Usare quando prendi medikit o bende' }
         );
 
       return interaction.reply({ embeds: [embed], components: [row1] });
@@ -319,23 +321,41 @@ async function handleCommands(interaction) {
 
     // ===== /magazzino =====
     if (command === 'magazzino') {
-      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
       const stock = db.getAllStock();
 
-      const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('select_magazzino')
-        .setPlaceholder('Seleziona prodotto');
+      const btnPrendiMedikit = new ButtonBuilder()
+        .setCustomId('mag_prendi_medikit')
+        .setLabel('🩺 Prendi Medikit')
+        .setStyle(ButtonStyle.Secondary);
 
-      Object.keys(stock).forEach(prodotto => {
-        selectMenu.addOptions({
-          label: prodotto.charAt(0).toUpperCase() + prodotto.slice(1),
-          value: prodotto
-        });
-      });
+      const btnRimettiMedikit = new ButtonBuilder()
+        .setCustomId('mag_rimetti_medikit')
+        .setLabel('🩺 Rimetti Medikit')
+        .setStyle(ButtonStyle.Success);
 
-      const row = new ActionRowBuilder().addComponents(selectMenu);
-      const embed = createEmbed('📦 Magazzino', 'Seleziona il prodotto da gestire');
-      return interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
+      const btnPrendiSoleBende = new ButtonBuilder()
+        .setCustomId('mag_prendi_sole_bende')
+        .setLabel('🩹 Prendi Sole Bende')
+        .setStyle(ButtonStyle.Secondary);
+
+      const btnRimettiSoleBende = new ButtonBuilder()
+        .setCustomId('mag_rimetti_sole_bende')
+        .setLabel('🩹 Rimetti Sole Bende')
+        .setStyle(ButtonStyle.Success);
+
+      const row1 = new ActionRowBuilder().addComponents(btnPrendiMedikit, btnRimettiMedikit);
+      const row2 = new ActionRowBuilder().addComponents(btnPrendiSoleBende, btnRimettiSoleBende);
+
+      const embed = createEmbed(
+        '📦 Magazzino EMS',
+        `**🩺 Medikit:** ${stock.medikit}\n` +
+        `**🩹 Sole Bende:** ${stock.sole_bende}\n\n` +
+        'Usa i pulsanti sotto per prendere o rimettere gli oggetti. Ogni azione aggiorna subito lo stack.',
+        '#3498db'
+      );
+
+      return interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: false });
     }
 
     // ===== /forzastop =====
@@ -355,6 +375,52 @@ async function handleCommands(interaction) {
       const embed = createEmbed(
         '✅ Stop Forzato',
         `Timbratura forzata per ${dipendente} registrata.`,
+        '#ff6600'
+      );
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    // ===== /aggiornastack =====
+    if (command === 'aggiornastack') {
+      if (!hasAdminRole(member)) {
+        const embed = createEmbed(
+          '❌ Permesso Negato',
+          'Solo Direttore e CEO possono usare questo comando',
+          '#ff0000'
+        );
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      const prodotto = interaction.options.getString('prodotto');
+      const quantita = interaction.options.getInteger('quantita');
+      const nuovoStock = db.aggiungiStock(prodotto, quantita);
+
+      const embed = createEmbed(
+        '✅ Stock Aggiornato',
+        `**${prodotto === 'medikit' ? 'Medikit' : 'Sole Bende'}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
+        '#00ff00'
+      );
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    // ===== /tolgiestock =====
+    if (command === 'tolgiestock') {
+      if (!hasAdminRole(member)) {
+        const embed = createEmbed(
+          '❌ Permesso Negato',
+          'Solo Direttore e CEO possono usare questo comando',
+          '#ff0000'
+        );
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      const prodotto = interaction.options.getString('prodotto');
+      const quantita = interaction.options.getInteger('quantita');
+      const nuovoStock = db.togliStock(prodotto, quantita);
+
+      const embed = createEmbed(
+        '✅ Stock Rimosso',
+        `**${prodotto === 'medikit' ? 'Medikit' : 'Sole Bende'}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
         '#ff6600'
       );
       return interaction.reply({ embeds: [embed], ephemeral: true });

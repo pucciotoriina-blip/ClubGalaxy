@@ -11,24 +11,14 @@
   ],
   "prodotti_magazzino": [
     {
-      "id": "cibo",
-      "nome": "Cibo",
-      "emoji": "🍽️"
+      "id": "medikit",
+      "nome": "Medikit",
+      "emoji": "🩺"
     },
     {
-      "id": "bevanda",
-      "nome": "Bevanda",
-      "emoji": "🥤"
-    },
-    {
-      "id": "gratta_e_vinci",
-      "nome": "Gratta e Vinci",
-      "emoji": "🎰"
-    },
-    {
-      "id": "alcolici",
-      "nome": "Alcolici",
-      "emoji": "🍺"
+      "id": "sole_bende",
+      "nome": "Sole Bende",
+      "emoji": "🩹"
     }
   ],
   "colori": {

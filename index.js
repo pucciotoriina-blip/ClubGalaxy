@@ -186,113 +186,74 @@ client.on('interactionCreate', async (interaction) => {
       // Magazzino
       if (interaction.customId === 'btn_magazzino') {
         const stock = db.getAllStock();
-        const selectMenu = new StringSelectMenuBuilder()
-          .setCustomId('select_magazzino')
-          .setPlaceholder('Seleziona prodotto');
 
-        Object.keys(stock).forEach(prodotto => {
-          selectMenu.addOptions({
-            label: prodotto.charAt(0).toUpperCase() + prodotto.slice(1),
-            value: prodotto
-          });
-        });
+        const btnPrendiMedikit = new ButtonBuilder()
+          .setCustomId('mag_prendi_medikit')
+          .setLabel('🩺 Prendi Medikit')
+          .setStyle(ButtonStyle.Secondary);
 
-        const row = new ActionRowBuilder().addComponents(selectMenu);
+        const btnRimettiMedikit = new ButtonBuilder()
+          .setCustomId('mag_rimetti_medikit')
+          .setLabel('🩺 Rimetti Medikit')
+          .setStyle(ButtonStyle.Success);
+
+        const btnPrendiSoleBende = new ButtonBuilder()
+          .setCustomId('mag_prendi_sole_bende')
+          .setLabel('🩹 Prendi Sole Bende')
+          .setStyle(ButtonStyle.Secondary);
+
+        const btnRimettiSoleBende = new ButtonBuilder()
+          .setCustomId('mag_rimetti_sole_bende')
+          .setLabel('🩹 Rimetti Sole Bende')
+          .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(btnPrendiMedikit, btnRimettiMedikit);
+        const row2 = new ActionRowBuilder().addComponents(btnPrendiSoleBende, btnRimettiSoleBende);
+
         const embed = createEmbed(
-          '📦 Magazzino',
-          'Seleziona il prodotto da gestire. Il rifornimento dello stock è riservato a Direttore/CEO.',
+          '📦 Magazzino EMS',
+          `**🩺 Medikit:** ${stock.medikit}\n` +
+          `**🩹 Sole Bende:** ${stock.sole_bende}\n\n` +
+          'Usa i pulsanti sotto per prendere o rimettere gli oggetti. Ogni azione aggiorna subito lo stack.',
           '#3498db'
         );
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
+
+        await interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: false });
       }
 
-      // Magazzino - Aggiungi Stock
-      if (interaction.customId.startsWith('mag_aggiungi_')) {
-        if (!hasAdminRole(member)) {
+      // Magazzino - Prendi/Rimetti Oggetto
+      if (interaction.customId.startsWith('mag_prendi_') || interaction.customId.startsWith('mag_rimetti_')) {
+        const prodotto = interaction.customId.replace('mag_prendi_', '').replace('mag_rimetti_', '');
+        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Sole Bende';
+        const isRimetti = interaction.customId.startsWith('mag_rimetti_');
+
+        if (!isRimetti && db.getStock(prodotto) <= 0) {
           const embed = createEmbed(
-            '❌ Permesso Negato',
-            'Solo Direttore e CEO possono rifornire il magazzino.',
+            '❌ Stock Esaurito',
+            `Non ci sono più ${nomeProdotto.toLowerCase()} disponibili in magazzino.`,
             '#ff0000'
           );
           return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        const prodotto = interaction.customId.replace('mag_aggiungi_', '');
-        const modal = new ModalBuilder()
-          .setCustomId(`modal_mag_aggiungi_${prodotto}`)
-          .setTitle(`Aggiungi Stock - ${prodotto}`);
-
-        const quantitaInput = new TextInputBuilder()
-          .setCustomId('quantita_input')
-          .setLabel('Quantità da aggiungere')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true);
-
-        const row = new ActionRowBuilder().addComponents(quantitaInput);
-        modal.addComponents(row);
-        await interaction.showModal(modal);
-      }
-
-      // Magazzino - Togli Stock
-      if (interaction.customId.startsWith('mag_togli_')) {
-        if (!hasAdminRole(member)) {
-          const embed = createEmbed(
-            '❌ Permesso Negato',
-            'Solo Direttore e CEO può togliere stock.',
-            '#ff0000'
-          );
-          return interaction.reply({ embeds: [embed], ephemeral: true });
-        }
-
-        const prodotto = interaction.customId.replace('mag_togli_', '');
-        const modal = new ModalBuilder()
-          .setCustomId(`modal_mag_togli_${prodotto}`)
-          .setTitle(`Togli Stock - ${prodotto}`);
-
-        const quantitaInput = new TextInputBuilder()
-          .setCustomId('quantita_input')
-          .setLabel('Quantità da togliere')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true);
-
-        const row = new ActionRowBuilder().addComponents(quantitaInput);
-        modal.addComponents(row);
-        await interaction.showModal(modal);
-      }
-    }
-
-    // ========== SELECT MENU INTERACTIONS ==========
-    if (interaction.isStringSelectMenu()) {
-      if (interaction.customId === 'select_magazzino') {
-        const prodotto = interaction.values[0];
-        const stock = db.getStock(prodotto);
-        const isAdmin = hasAdminRole(interaction.member);
-
-        const row = new ActionRowBuilder();
-        if (isAdmin) {
-          const btnAggiungi = new ButtonBuilder()
-            .setCustomId(`mag_aggiungi_${prodotto}`)
-            .setLabel('➕ Aggiungi')
-            .setStyle(ButtonStyle.Success);
-
-          const btnTogli = new ButtonBuilder()
-            .setCustomId(`mag_togli_${prodotto}`)
-            .setLabel('➖ Togli')
-            .setStyle(ButtonStyle.Danger);
-
-          row.addComponents(btnAggiungi, btnTogli);
-        }
+        const nuovoStock = isRimetti ? db.aggiungiStock(prodotto, 1) : db.togliStock(prodotto, 1);
+        const stock = db.getAllStock();
 
         const embed = createEmbed(
-          `📦 ${prodotto.toUpperCase()}`,
-          `**Stock attuale:** ${stock}` +
-          (isAdmin ? '' : '\n\nℹ️ Solo Direttore/CEO può aggiornare o togliere stock.'),
-          '#3498db'
+          isRimetti ? '✅ Oggetto Rimesso' : '✅ Oggetto Preso',
+          `Hai ${isRimetti ? 'rimesso' : 'preso'} 1 **${nomeProdotto}**.
+
+` +
+          `**Adesso lo stack è:**\n🩺 Medikit: ${stock.medikit}\n🩹 Sole Bende: ${stock.sole_bende}`,
+          isRimetti ? '#00ff00' : '#ffcc00'
         );
 
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
+        return interaction.reply({ embeds: [embed], ephemeral: true });
       }
+
     }
+
+
 
     // ========== MODAL SUBMISSIONS ==========
     if (interaction.isModalSubmit()) {
@@ -327,60 +288,7 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
-      // Magazzino - Modale Aggiungi Stock
-      if (interaction.customId.startsWith('modal_mag_aggiungi_')) {
-        const prodotto = interaction.customId.replace('modal_mag_aggiungi_', '');
-        const quantita = parseInt(interaction.fields.getTextInputValue('quantita_input'));
 
-        if (isNaN(quantita) || quantita <= 0) {
-          const embed = createEmbed(
-            '❌ Errore',
-            'Inserisci una quantità valida (numero positivo)',
-            '#ff0000'
-          );
-          return interaction.reply({ embeds: [embed], ephemeral: true });
-        }
-
-        const nuovoStock = db.aggiungiStock(prodotto, quantita);
-        const embed = createEmbed(
-          '✅ Stock Aggiunto',
-          `**${prodotto.toUpperCase()}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
-          '#00ff00'
-        );
-        await interaction.reply({ embeds: [embed], ephemeral: false });
-      }
-
-      // Magazzino - Modale Togli Stock
-      if (interaction.customId.startsWith('modal_mag_togli_')) {
-        if (!hasAdminRole(interaction.member)) {
-          const embed = createEmbed(
-            '❌ Permesso Negato',
-            'Solo Direttore e CEO può togliere stock.',
-            '#ff0000'
-          );
-          return interaction.reply({ embeds: [embed], ephemeral: true });
-        }
-
-        const prodotto = interaction.customId.replace('modal_mag_togli_', '');
-        const quantita = parseInt(interaction.fields.getTextInputValue('quantita_input'));
-
-        if (isNaN(quantita) || quantita <= 0) {
-          const embed = createEmbed(
-            '❌ Errore',
-            'Inserisci una quantità valida (numero positivo)',
-            '#ff0000'
-          );
-          return interaction.reply({ embeds: [embed], ephemeral: true });
-        }
-
-        const nuovoStock = db.togliStock(prodotto, quantita);
-        const embed = createEmbed(
-          '✅ Stock Rimosso',
-          `**${prodotto.toUpperCase()}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
-          '#ff0000'
-        );
-        await interaction.reply({ embeds: [embed], ephemeral: false });
-      }
     }
   } catch (error) {
     console.error('Errore in interazione:', error);

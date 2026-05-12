@@ -8,10 +8,8 @@ const defaultDB = {
   timbrature: [],
   vendite: [],
   magazzino: {
-    cibo: 0,
-    bevanda: 0,
-    gratta_e_vinci: 0,
-    alcolici: 0
+    medikit: 0,
+    sole_bende: 0
   },
   fatture: []
 };
