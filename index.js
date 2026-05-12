@@ -198,12 +198,25 @@ client.on('interactionCreate', async (interaction) => {
         });
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
-        const embed = createEmbed('📦 Magazzino', 'Seleziona il prodotto da gestire');
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+        const embed = createEmbed(
+          '📦 Magazzino',
+          'Seleziona il prodotto da gestire. Il rifornimento dello stock è riservato a Direttore/CEO.',
+          '#3498db'
+        );
+        await interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
       }
 
       // Magazzino - Aggiungi Stock
       if (interaction.customId.startsWith('mag_aggiungi_')) {
+        if (!hasAdminRole(member)) {
+          const embed = createEmbed(
+            '❌ Permesso Negato',
+            'Solo Direttore e CEO possono rifornire il magazzino.',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
         const prodotto = interaction.customId.replace('mag_aggiungi_', '');
         const modal = new ModalBuilder()
           .setCustomId(`modal_mag_aggiungi_${prodotto}`)
@@ -222,6 +235,15 @@ client.on('interactionCreate', async (interaction) => {
 
       // Magazzino - Togli Stock
       if (interaction.customId.startsWith('mag_togli_')) {
+        if (!hasAdminRole(member)) {
+          const embed = createEmbed(
+            '❌ Permesso Negato',
+            'Solo Direttore e CEO può togliere stock.',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
         const prodotto = interaction.customId.replace('mag_togli_', '');
         const modal = new ModalBuilder()
           .setCustomId(`modal_mag_togli_${prodotto}`)
@@ -244,26 +266,31 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.customId === 'select_magazzino') {
         const prodotto = interaction.values[0];
         const stock = db.getStock(prodotto);
+        const isAdmin = hasAdminRole(interaction.member);
 
-        const btnAggiungi = new ButtonBuilder()
-          .setCustomId(`mag_aggiungi_${prodotto}`)
-          .setLabel('➕ Aggiungi')
-          .setStyle(ButtonStyle.Success);
+        const row = new ActionRowBuilder();
+        if (isAdmin) {
+          const btnAggiungi = new ButtonBuilder()
+            .setCustomId(`mag_aggiungi_${prodotto}`)
+            .setLabel('➕ Aggiungi')
+            .setStyle(ButtonStyle.Success);
 
-        const btnTogli = new ButtonBuilder()
-          .setCustomId(`mag_togli_${prodotto}`)
-          .setLabel('➖ Togli')
-          .setStyle(ButtonStyle.Danger);
+          const btnTogli = new ButtonBuilder()
+            .setCustomId(`mag_togli_${prodotto}`)
+            .setLabel('➖ Togli')
+            .setStyle(ButtonStyle.Danger);
 
-        const row = new ActionRowBuilder().addComponents(btnAggiungi, btnTogli);
+          row.addComponents(btnAggiungi, btnTogli);
+        }
 
         const embed = createEmbed(
           `📦 ${prodotto.toUpperCase()}`,
-          `**Stock attuale:** ${stock}`,
+          `**Stock attuale:** ${stock}` +
+          (isAdmin ? '' : '\n\nℹ️ Solo Direttore/CEO può aggiornare o togliere stock.'),
           '#3498db'
         );
 
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+        await interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
       }
     }
 
@@ -297,7 +324,7 @@ client.on('interactionCreate', async (interaction) => {
           '#00ff00'
         );
 
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
       // Magazzino - Modale Aggiungi Stock
@@ -320,11 +347,20 @@ client.on('interactionCreate', async (interaction) => {
           `**${prodotto.toUpperCase()}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
           '#00ff00'
         );
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
       // Magazzino - Modale Togli Stock
       if (interaction.customId.startsWith('modal_mag_togli_')) {
+        if (!hasAdminRole(interaction.member)) {
+          const embed = createEmbed(
+            '❌ Permesso Negato',
+            'Solo Direttore e CEO può togliere stock.',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
         const prodotto = interaction.customId.replace('modal_mag_togli_', '');
         const quantita = parseInt(interaction.fields.getTextInputValue('quantita_input'));
 
@@ -343,7 +379,7 @@ client.on('interactionCreate', async (interaction) => {
           `**${prodotto.toUpperCase()}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
           '#ff0000'
         );
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
       }
     }
   } catch (error) {

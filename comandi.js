@@ -33,6 +33,20 @@ commands.push(
     .toJSON()
 );
 
+commands.push(
+  new SlashCommandBuilder()
+    .setName('registrovendite')
+    .setDescription('Apri il modulo per registrare una vendita')
+    .toJSON()
+);
+
+commands.push(
+  new SlashCommandBuilder()
+    .setName('magazzino')
+    .setDescription('Mostra lo stato del magazzino')
+    .toJSON()
+);
+
 // ============================================
 // COMANDO: /forzastop (Solo Direttore/CEO)
 // ============================================
@@ -249,33 +263,79 @@ async function handleCommands(interaction) {
 
       const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio);
 
-      // Pulsanti altri
-      const btnVendite = new ButtonBuilder()
-        .setCustomId('btn_register_vendita')
-        .setLabel('💰 Registro Vendite')
-        .setStyle(ButtonStyle.Primary);
-
-      const btnMagazzino = new ButtonBuilder()
-        .setCustomId('btn_magazzino')
-        .setLabel('📦 Magazzino')
-        .setStyle(ButtonStyle.Primary);
-
-      const row2 = new ActionRowBuilder().addComponents(btnVendite, btnMagazzino);
-
       const embed = createEmbed(
         '🎫 CARTELLINO - BOT GALAZY',
-        '**Benvenuto Barista/Security/Ballerina**\n\nUtilizza i seguenti pulsanti per gestire le tue attività:',
+        '**Benvenuto Barista/Security/Ballerina**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le info.\n' +
+        'Le vendite e il magazzino si gestiscono con i comandi `/registrovendite` e `/magazzino`.',
         '#FFD700'
       )
         .addFields(
           { name: '⏱️ Timbratura', value: 'Registra entrata e uscita dal servizio' },
-          { name: '💰 Vendite', value: 'Registra le tue vendite giornaliere' },
-          { name: '📦 Magazzino', value: 'Gestisci lo stock dei prodotti' },
           { name: '📊 Info', value: 'Visualizza le tue statistiche' },
           { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' }
         );
 
-      return interaction.reply({ embeds: [embed], components: [row1, row2] });
+      return interaction.reply({ embeds: [embed], components: [row1] });
+    }
+
+    // ===== /registrovendite =====
+    if (command === 'registrovendite') {
+      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+
+      const modal = new ModalBuilder()
+        .setCustomId('modal_vendita')
+        .setTitle('Registra Vendita');
+
+      const cosaiInput = new TextInputBuilder()
+        .setCustomId('vendita_cosa')
+        .setLabel('Cosa hai venduto?')
+        .setStyle(TextInputStyle.Paragraph);
+
+      const prezzoInput = new TextInputBuilder()
+        .setCustomId('vendita_prezzo')
+        .setLabel('Prezzo')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const convenzioneInput = new TextInputBuilder()
+        .setCustomId('vendita_convenzione')
+        .setLabel('Convenzione? (si/no)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const societaInput = new TextInputBuilder()
+        .setCustomId('vendita_societa')
+        .setLabel('Quale società?')
+        .setStyle(TextInputStyle.Short);
+
+      const row1 = new ActionRowBuilder().addComponents(cosaiInput);
+      const row2 = new ActionRowBuilder().addComponents(prezzoInput);
+      const row3 = new ActionRowBuilder().addComponents(convenzioneInput);
+      const row4 = new ActionRowBuilder().addComponents(societaInput);
+
+      modal.addComponents(row1, row2, row3, row4);
+      return interaction.showModal(modal);
+    }
+
+    // ===== /magazzino =====
+    if (command === 'magazzino') {
+      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+      const stock = db.getAllStock();
+
+      const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('select_magazzino')
+        .setPlaceholder('Seleziona prodotto');
+
+      Object.keys(stock).forEach(prodotto => {
+        selectMenu.addOptions({
+          label: prodotto.charAt(0).toUpperCase() + prodotto.slice(1),
+          value: prodotto
+        });
+      });
+
+      const row = new ActionRowBuilder().addComponents(selectMenu);
+      const embed = createEmbed('📦 Magazzino', 'Seleziona il prodotto da gestire');
+      return interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
     }
 
     // ===== /forzastop =====
