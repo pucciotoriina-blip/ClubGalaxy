@@ -500,9 +500,7 @@ client.on('interactionCreate', async (interaction) => {
 **Articolo:** ${cosa}
 **Prezzo:** €${prezzo}
 **Convenzione:** ${convenzione}
-**Società:** ${societa || 'N/D'}
-
-Adesso compila i dati della fattura.`,
+**Società:** ${societa || 'N/D'}`,
           '#00ff00'
         );
 
@@ -592,7 +590,8 @@ Adesso compila i dati della fattura.`,
         );
         await interaction.reply({ embeds: [embed], ephemeral: false });
         const menuPanel = createBotMenuPanel();
-        return interaction.followUp({ embeds: [menuPanel.embed], components: menuPanel.components, ephemeral: false });
+        await interaction.followUp({ embeds: [menuPanel.embed], components: menuPanel.components, ephemeral: false });
+        return;
       }
 
 
