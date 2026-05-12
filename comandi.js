@@ -48,6 +48,21 @@ commands.push(
 );
 
 // ============================================
+// COMANDO: /stats (Solo Direttore/CEO)
+// ============================================
+
+commands.push(
+  new SlashCommandBuilder()
+    .setName('stats')
+    .setDescription('Visualizza le statistiche di un dipendente')
+    .addUserOption(option =>
+      option
+        .setName('utente')
+        .setDescription('L\'utente di cui visualizzare le statistiche')
+        .setRequired(true)
+    )
+    .toJSON()
+);
 // COMANDO: /forzastop (Solo Direttore/CEO)
 // ============================================
 
@@ -282,41 +297,29 @@ async function handleCommands(interaction) {
 
     // ===== /registrovendite =====
     if (command === 'registrovendite') {
-      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-      const modal = new ModalBuilder()
-        .setCustomId('modal_vendita')
-        .setTitle('Registra Vendita');
+      const btnRegistra = new ButtonBuilder()
+        .setCustomId('btn_registra_vendita')
+        .setLabel('📝 Registra Vendita')
+        .setStyle(ButtonStyle.Primary);
 
-      const cosaiInput = new TextInputBuilder()
-        .setCustomId('vendita_cosa')
-        .setLabel('Cosa hai venduto?')
-        .setStyle(TextInputStyle.Paragraph);
+      const row = new ActionRowBuilder().addComponents(btnRegistra);
 
-      const prezzoInput = new TextInputBuilder()
-        .setCustomId('vendita_prezzo')
-        .setLabel('Prezzo')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+      const embed = createEmbed(
+        '💰 Registro Vendite',
+        '**Registra una nuova vendita nel sistema**\n\n' +
+        'Premi il pulsante sotto per aprire il modulo di registrazione. ' +
+        'Dovrai compilare i dettagli della vendita (articolo, prezzo, tipo di transazione) ' +
+        'e successivamente confermare i dati della fattura.',
+        '#00AA00'
+      )
+        .addFields(
+          { name: '📋 Dati Richiesti', value: 'Cosa hai venduto, prezzo, convenzione, società' },
+          { name: '✅ Processo', value: '1️⃣ Compila vendita → 2️⃣ Compila fattura → 3️⃣ Completato' }
+        );
 
-      const convenzioneInput = new TextInputBuilder()
-        .setCustomId('vendita_convenzione')
-        .setLabel('Convenzione? (si/no)')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const societaInput = new TextInputBuilder()
-        .setCustomId('vendita_societa')
-        .setLabel('Quale società?')
-        .setStyle(TextInputStyle.Short);
-
-      const row1 = new ActionRowBuilder().addComponents(cosaiInput);
-      const row2 = new ActionRowBuilder().addComponents(prezzoInput);
-      const row3 = new ActionRowBuilder().addComponents(convenzioneInput);
-      const row4 = new ActionRowBuilder().addComponents(societaInput);
-
-      modal.addComponents(row1, row2, row3, row4);
-      return interaction.showModal(modal);
+      return interaction.reply({ embeds: [embed], components: [row], ephemeral: false });
     }
 
     // ===== /magazzino =====
@@ -336,12 +339,12 @@ async function handleCommands(interaction) {
 
       const btnPrendiSoleBende = new ButtonBuilder()
         .setCustomId('mag_prendi_sole_bende')
-        .setLabel('🩹 Prendi Sole Bende')
+        .setLabel('🩹 Prendi Bende')
         .setStyle(ButtonStyle.Secondary);
 
       const btnRimettiSoleBende = new ButtonBuilder()
         .setCustomId('mag_rimetti_sole_bende')
-        .setLabel('🩹 Rimetti Sole Bende')
+        .setLabel('🩹 Rimetti Bende')
         .setStyle(ButtonStyle.Success);
 
       const row1 = new ActionRowBuilder().addComponents(btnPrendiMedikit, btnRimettiMedikit);
@@ -350,12 +353,60 @@ async function handleCommands(interaction) {
       const embed = createEmbed(
         '📦 Magazzino EMS',
         `**🩺 Medikit:** ${stock.medikit}\n` +
-        `**🩹 Sole Bende:** ${stock.sole_bende}\n\n` +
-        'Usa i pulsanti sotto per prendere o rimettere gli oggetti. Ogni azione aggiorna subito lo stack.',
+        `**🩹 Bende:** ${stock.sole_bende}\n\n` +
+        'Usa i pulsanti sotto per prendere o rimettere gli oggetti.',
         '#3498db'
       );
 
       return interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: false });
+    }
+
+    // ===== /stats =====
+    if (command === 'stats') {
+      if (!hasAdminRole(member)) {
+        const embed = createEmbed(
+          '❌ Permesso Negato',
+          'Solo Direttore e CEO possono visualizzare le statistiche',
+          '#ff0000'
+        );
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      const utente = interaction.options.getUser('utente');
+      const userId = utente.id;
+      const userName = utente.username;
+
+      const timbrature = db.getTimbratureUtente(userId);
+      const vendite = db.getVenditeUtente(userId);
+      const totaleFatture = db.getTotaleFattureUtente(userId);
+      const totaleVendite = db.getTotaleVenditeUtente(userId);
+
+      // Calcolo ore servizio
+      let oreServizio = 0;
+      for (let i = 0; i < timbrature.length; i += 2) {
+        if (timbrature[i].azione === 'IN' && timbrature[i + 1]?.azione === 'OUT') {
+          const inTime = new Date(timbrature[i].timestamp);
+          const outTime = new Date(timbrature[i + 1].timestamp);
+          oreServizio += (outTime - inTime) / (1000 * 60 * 60);
+        }
+      }
+
+      const embed = createEmbed(
+        `📊 Statistiche - ${userName}`,
+        `**Tag:** <@${userId}>\n` +
+        `**ID:** \`${userId}\``,
+        '#3498db'
+      )
+        .addFields(
+          { name: '⏱️ Ore di servizio', value: `${oreServizio.toFixed(2)} ore`, inline: true },
+          { name: '💰 Totale Vendite', value: `€${totaleVendite.toFixed(2)}`, inline: true },
+          { name: '🧾 Totale Fatture', value: `€${totaleFatture.toFixed(2)}`, inline: true },
+          { name: '📈 Numero Vendite', value: `${vendite.length}`, inline: true },
+          { name: '📋 Timbrature Totali', value: `${timbrature.length}`, inline: true },
+          { name: '✅ Stato', value: timbrature.length > 0 ? '🟢 Attivo' : '⚪ Inattivo', inline: true }
+        );
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     // ===== /forzastop =====
@@ -397,7 +448,7 @@ async function handleCommands(interaction) {
 
       const embed = createEmbed(
         '✅ Stock Aggiornato',
-        `**${prodotto === 'medikit' ? 'Medikit' : 'Sole Bende'}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
+        `**${prodotto === 'medikit' ? 'Medikit' : 'Bende'}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
         '#00ff00'
       );
       return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -420,7 +471,7 @@ async function handleCommands(interaction) {
 
       const embed = createEmbed(
         '✅ Stock Rimosso',
-        `**${prodotto === 'medikit' ? 'Medikit' : 'Sole Bende'}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
+        `**${prodotto === 'medikit' ? 'Medikit' : 'Bende'}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
         '#ff6600'
       );
       return interaction.reply({ embeds: [embed], ephemeral: true });

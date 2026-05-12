@@ -146,8 +146,8 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.reply({ embeds: [embed], ephemeral: true });
       }
 
-      // Registro Vendite
-      if (interaction.customId === 'btn_register_vendita') {
+      // Registra Vendita Button
+      if (interaction.customId === 'btn_registra_vendita') {
         const modal = new ModalBuilder()
           .setCustomId('modal_vendita')
           .setTitle('Registra Vendita');
@@ -199,12 +199,12 @@ client.on('interactionCreate', async (interaction) => {
 
         const btnPrendiSoleBende = new ButtonBuilder()
           .setCustomId('mag_prendi_sole_bende')
-          .setLabel('🩹 Prendi Sole Bende')
+          .setLabel('🩹 Prendi Bende')
           .setStyle(ButtonStyle.Secondary);
 
         const btnRimettiSoleBende = new ButtonBuilder()
           .setCustomId('mag_rimetti_sole_bende')
-          .setLabel('🩹 Rimetti Sole Bende')
+          .setLabel('🩹 Rimetti Bende')
           .setStyle(ButtonStyle.Success);
 
         const row1 = new ActionRowBuilder().addComponents(btnPrendiMedikit, btnRimettiMedikit);
@@ -213,8 +213,8 @@ client.on('interactionCreate', async (interaction) => {
         const embed = createEmbed(
           '📦 Magazzino EMS',
           `**🩺 Medikit:** ${stock.medikit}\n` +
-          `**🩹 Sole Bende:** ${stock.sole_bende}\n\n` +
-          'Usa i pulsanti sotto per prendere o rimettere gli oggetti. Ogni azione aggiorna subito lo stack.',
+          `**🩹 Bende:** ${stock.sole_bende}\n\n` +
+          'Usa i pulsanti sotto per prendere o rimettere gli oggetti.',
           '#3498db'
         );
 
@@ -224,31 +224,22 @@ client.on('interactionCreate', async (interaction) => {
       // Magazzino - Prendi/Rimetti Oggetto
       if (interaction.customId.startsWith('mag_prendi_') || interaction.customId.startsWith('mag_rimetti_')) {
         const prodotto = interaction.customId.replace('mag_prendi_', '').replace('mag_rimetti_', '');
-        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Sole Bende';
+        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Bende';
         const isRimetti = interaction.customId.startsWith('mag_rimetti_');
 
-        if (!isRimetti && db.getStock(prodotto) <= 0) {
-          const embed = createEmbed(
-            '❌ Stock Esaurito',
-            `Non ci sono più ${nomeProdotto.toLowerCase()} disponibili in magazzino.`,
-            '#ff0000'
-          );
-          return interaction.reply({ embeds: [embed], ephemeral: true });
-        }
+        const modal = new ModalBuilder()
+          .setCustomId(`modal_magazzino_${isRimetti ? 'rimetti' : 'prendi'}_${prodotto}`)
+          .setTitle(`${isRimetti ? 'Rimetti' : 'Prendi'} ${nomeProdotto}`);
 
-        const nuovoStock = isRimetti ? db.aggiungiStock(prodotto, 1) : db.togliStock(prodotto, 1);
-        const stock = db.getAllStock();
+        const quantitaInput = new TextInputBuilder()
+          .setCustomId('quantita_magazzino')
+          .setLabel(`Quantità da ${isRimetti ? 'rimettere' : 'prendere'}`)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-        const embed = createEmbed(
-          isRimetti ? '✅ Oggetto Rimesso' : '✅ Oggetto Preso',
-          `Hai ${isRimetti ? 'rimesso' : 'preso'} 1 **${nomeProdotto}**.
-
-` +
-          `**Adesso lo stack è:**\n🩺 Medikit: ${stock.medikit}\n🩹 Sole Bende: ${stock.sole_bende}`,
-          isRimetti ? '#00ff00' : '#ffcc00'
-        );
-
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        const row = new ActionRowBuilder().addComponents(quantitaInput);
+        modal.addComponents(row);
+        await interaction.showModal(modal);
       }
 
     }
@@ -257,6 +248,46 @@ client.on('interactionCreate', async (interaction) => {
 
     // ========== MODAL SUBMISSIONS ==========
     if (interaction.isModalSubmit()) {
+      // Modal Magazzino Prendi/Rimetti
+      if (interaction.customId.startsWith('modal_magazzino_')) {
+        const [_, operazione, prodotto] = interaction.customId.split('_');
+        const isRimetti = operazione === 'rimetti';
+        const quantita = parseInt(interaction.fields.getTextInputValue('quantita_magazzino'));
+        const nomeProdotto = prodotto === 'medikit' ? 'Medikit' : 'Bende';
+
+        if (isNaN(quantita) || quantita <= 0) {
+          const embed = createEmbed(
+            '❌ Errore',
+            'Inserisci una quantità valida (numero positivo)',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        const stockAttuale = db.getStock(prodotto);
+
+        if (!isRimetti && stockAttuale < quantita) {
+          const embed = createEmbed(
+            '❌ Stock Insufficiente',
+            `Non ci sono abbastanza ${nomeProdotto.toLowerCase()}. Disponibili: ${stockAttuale}`,
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        const nuovoStock = isRimetti ? db.aggiungiStock(prodotto, quantita) : db.togliStock(prodotto, quantita);
+        const stock = db.getAllStock();
+
+        const embed = createEmbed(
+          isRimetti ? '✅ Oggetto Rimesso' : '✅ Oggetto Preso',
+          `Hai ${isRimetti ? 'rimesso' : 'preso'} **${quantita}** ${nomeProdotto}${quantita > 1 ? '(e)' : ''}.\n\n` +
+          `**Adesso lo stack è:**\n🩺 Medikit: ${stock.medikit}\n🩹 Bende: ${stock.sole_bende}`,
+          isRimetti ? '#00ff00' : '#ffcc00'
+        );
+
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
       if (interaction.customId === 'modal_vendita') {
         const cosa = interaction.fields.getTextInputValue('vendita_cosa');
         const prezzo = interaction.fields.getTextInputValue('vendita_prezzo');
@@ -272,20 +303,98 @@ client.on('interactionCreate', async (interaction) => {
           societa
         );
 
-        const fattura = db.addFattura(
-          interaction.user.id,
-          interaction.user.username,
-          cosa,
-          prezzo
-        );
-
+        // Mostra recap della vendita e apri modulo fattura
         const embed = createEmbed(
           '✅ Vendita Registrata',
-          `**Articolo:** ${cosa}\n**Prezzo:** €${prezzo}\n**Convenzione:** ${convenzione}\n**Società:** ${societa || 'N/D'}\n\n🧾 **Fattura ID:** \`${fattura.id}\``,
+          `**Articolo:** ${cosa}\n**Prezzo:** €${prezzo}\n**Convenzione:** ${convenzione}\n**Società:** ${societa || 'N/D'}\n\nAdesso compila i dati della fattura.`,
           '#00ff00'
         );
 
-        await interaction.reply({ embeds: [embed], ephemeral: false });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+
+        // Apri modulo fattura
+        const modalFattura = new ModalBuilder()
+          .setCustomId(`modal_fattura_${vendita.id}`)
+          .setTitle('Conferma Fattura');
+
+        const numeroFatturaInput = new TextInputBuilder()
+          .setCustomId('fattura_numero')
+          .setLabel('Numero Fattura')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
+
+        const noteInput = new TextInputBuilder()
+          .setCustomId('fattura_note')
+          .setLabel('Note (opzionale)')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false);
+
+        const rowF1 = new ActionRowBuilder().addComponents(numeroFatturaInput);
+        const rowF2 = new ActionRowBuilder().addComponents(noteInput);
+
+        modalFattura.addComponents(rowF1, rowF2);
+        await interaction.showModal(modalFattura);
+      }
+
+      // Modulo Fattura
+      if (interaction.customId.startsWith('modal_fattura_')) {
+        const venditaId = interaction.customId.replace('modal_fattura_', '');
+        const numeroFattura = interaction.fields.getTextInputValue('fattura_numero');
+        const note = interaction.fields.getTextInputValue('fattura_note') || 'N/A';
+
+        // Recupera la vendita
+        const vendite = db.getVenditeUtente(interaction.user.id);
+        const vendita = vendite.find(v => v.id === venditaId);
+
+        if (!vendita) {
+          const embed = createEmbed(
+            '❌ Errore',
+            'Vendita non trovata',
+            '#ff0000'
+          );
+          return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        // Crea fattura
+        const fattura = db.addFattura(
+          interaction.user.id,
+          interaction.user.username,
+          vendita.cosa,
+          vendita.prezzo
+        );
+
+        // Invia nel canale fatture
+        const fatturaChannelId = process.env.FATTURA_ID;
+        if (fatturaChannelId) {
+          try {
+            const channel = await interaction.client.channels.fetch(fatturaChannelId);
+            const embedFattura = new EmbedBuilder()
+              .setColor('#FFD700')
+              .setTitle('📄 Nuova Fattura')
+              .setDescription(`**Numero Fattura:** ${numeroFattura}\n**ID Fattura Sistema:** \`${fattura.id}\``)
+              .addFields(
+                { name: '👤 Venditore', value: interaction.user.username },
+                { name: '📦 Articolo', value: vendita.cosa },
+                { name: '💰 Prezzo', value: `€${vendita.prezzo}` },
+                { name: '🏢 Società', value: vendita.societa || 'N/A' },
+                { name: '📝 Note', value: note },
+                { name: '📅 Data', value: new Date().toLocaleString('it-IT') }
+              )
+              .setTimestamp()
+              .setFooter({ text: 'BOT GALAZY' });
+            await channel.send({ embeds: [embedFattura] });
+          } catch (error) {
+            console.error('Errore invio fattura nel canale:', error);
+          }
+        }
+
+        // Mostra conferma
+        const embed = createEmbed(
+          '✅ Fattura Completata',
+          `**Numero Fattura:** ${numeroFattura}\n**Fattura ID:** \`${fattura.id}\`\n**Articolo:** ${vendita.cosa}\n**Prezzo:** €${vendita.prezzo}\n\nLa fattura è stata registrata e inviata nel canale fatture.`,
+          '#00ff00'
+        );
+        await interaction.reply({ embeds: [embed], ephemeral: true });
       }
 
 
