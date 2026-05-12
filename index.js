@@ -31,7 +31,7 @@ function createEmbed(title, description, color = '#0099ff') {
     .setTitle(title)
     .setDescription(description)
     .setTimestamp()
-    .setFooter({ text: 'BOT GALAZY' });
+    .setFooter({ text: 'developed by Lupomannaro' });
 }
 
 function createMagazzinoPanel(stock) {
@@ -575,7 +575,7 @@ client.on('interactionCreate', async (interaction) => {
                 { name: '📅 Data', value: new Date().toLocaleString('it-IT') }
               )
               .setTimestamp()
-              .setFooter({ text: 'BOT GALAZY' });
+              .setFooter({ text: 'developed by Lupomannaro' });
             await channel.send({ embeds: [embedFattura] });
           } catch (error) {
             console.error('Errore invio fattura nel canale:', error);

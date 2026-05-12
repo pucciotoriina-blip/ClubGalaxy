@@ -13,7 +13,7 @@ function createEmbed(title, description, color = '#0099ff') {
     .setTitle(title)
     .setDescription(description)
     .setTimestamp()
-    .setFooter({ text: 'BOT GALAZY' });
+    .setFooter({ text: 'developed by Lupomannaro' });
 }
 
 function hasAdminRole(member) {
