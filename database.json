@@ -5,5 +5,9 @@
     "medikit": 0,
     "sole_bende": 0
   },
+  "dispensa": {
+    "bevande": 0,
+    "cibo": 0
+  },
   "fatture": []
 }

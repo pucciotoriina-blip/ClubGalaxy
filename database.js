@@ -11,6 +11,10 @@ const defaultDB = {
     medikit: 0,
     sole_bende: 0
   },
+  dispensa: {
+    bevande: 0,
+    cibo: 0
+  },
   fatture: []
 };
 
@@ -26,8 +30,29 @@ class Database {
   }
 
   read() {
-    const data = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(data);
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    let changed = false;
+
+    if (!data.magazzino) {
+      data.magazzino = { medikit: 0, sole_bende: 0 };
+      changed = true;
+    }
+
+    if (!data.dispensa) {
+      data.dispensa = { bevande: 0, cibo: 0 };
+      changed = true;
+    }
+
+    if (!data.fatture) {
+      data.fatture = [];
+      changed = true;
+    }
+
+    if (changed) {
+      this.write(data);
+    }
+
+    return data;
   }
 
   write(data) {
@@ -124,6 +149,37 @@ class Database {
   getAllStock() {
     const db = this.read();
     return db.magazzino;
+  }
+
+  // Dispensa
+  aggiungiStockDispensa(prodotto, quantita) {
+    const db = this.read();
+    if (db.dispensa[prodotto] !== undefined) {
+      db.dispensa[prodotto] += quantita;
+      this.write(db);
+      return db.dispensa[prodotto];
+    }
+    return null;
+  }
+
+  togliStockDispensa(prodotto, quantita) {
+    const db = this.read();
+    if (db.dispensa[prodotto] !== undefined) {
+      db.dispensa[prodotto] = Math.max(0, db.dispensa[prodotto] - quantita);
+      this.write(db);
+      return db.dispensa[prodotto];
+    }
+    return null;
+  }
+
+  getStockDispensa(prodotto) {
+    const db = this.read();
+    return db.dispensa[prodotto] || 0;
+  }
+
+  getAllStockDispensa() {
+    const db = this.read();
+    return db.dispensa;
   }
 
   // Fatture

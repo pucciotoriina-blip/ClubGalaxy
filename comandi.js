@@ -47,6 +47,59 @@ commands.push(
     .toJSON()
 );
 
+commands.push(
+  new SlashCommandBuilder()
+    .setName('dispensa')
+    .setDescription('Mostra lo stato della dispensa (bevande e cibo)')
+    .toJSON()
+);
+
+commands.push(
+  new SlashCommandBuilder()
+    .setName('mettistockdispensa')
+    .setDescription('Aggiungi stock alla dispensa')
+    .addStringOption(option =>
+      option
+        .setName('prodotto')
+        .setDescription('Categoria da aggiornare')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Bevande', value: 'bevande' },
+          { name: 'Cibo', value: 'cibo' }
+        )
+    )
+    .addIntegerOption(option =>
+      option
+        .setName('quantita')
+        .setDescription('Quantità da aggiungere')
+        .setRequired(true)
+    )
+    .toJSON()
+);
+
+commands.push(
+  new SlashCommandBuilder()
+    .setName('toglistockdispensa')
+    .setDescription('Rimuovi stock dalla dispensa')
+    .addStringOption(option =>
+      option
+        .setName('prodotto')
+        .setDescription('Categoria da aggiornare')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Bevande', value: 'bevande' },
+          { name: 'Cibo', value: 'cibo' }
+        )
+    )
+    .addIntegerOption(option =>
+      option
+        .setName('quantita')
+        .setDescription('Quantità da rimuovere')
+        .setRequired(true)
+    )
+    .toJSON()
+);
+
 // ============================================
 // COMANDO: /stats (Solo Direttore/CEO)
 // ============================================
@@ -272,24 +325,18 @@ async function handleCommands(interaction) {
         .setLabel('👥 Servizio')
         .setStyle(ButtonStyle.Primary);
 
-      const btnMagazzino = new ButtonBuilder()
-        .setCustomId('btn_magazzino')
-        .setLabel('📦 Magazzino')
-        .setStyle(ButtonStyle.Primary);
-
-      const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio, btnMagazzino);
+      const row1 = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio);
 
       const embed = createEmbed(
         '🎫 CARTELLINO - BOT GALAZY',
-        '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura, le statistiche e il magazzino EMS.\n' +
-        'Premi **Magazzino** per prendere o rimettere medikit e sole bende.',
+        '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le statistiche.\n' +
+        'Usa il comando `/magazzino` per vedere lo stock EMS e `/dispensa` per vedere bevande e cibo.',
         '#FFD700'
       )
         .addFields(
           { name: '⏱️ Timbratura', value: 'Registra entrata e uscita dal servizio' },
           { name: '📊 Info', value: 'Visualizza le tue statistiche' },
-          { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' },
-          { name: '📦 Magazzino', value: 'Usare quando prendi medikit o bende' }
+          { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' }
         );
 
       return interaction.reply({ embeds: [embed], components: [row1] });
@@ -359,6 +406,64 @@ async function handleCommands(interaction) {
       );
 
       return interaction.reply({ embeds: [embed], components: [row1, row2], ephemeral: false });
+    }
+
+    // ===== /dispensa =====
+    if (command === 'dispensa') {
+      const stock = db.getAllStockDispensa();
+      const embed = createEmbed(
+        '🥫 Dispensa',
+        `**🥤 Bevande:** ${stock.bevande}\n` +
+        `**🍽️ Cibo:** ${stock.cibo}`,
+        '#8e44ad'
+      );
+      return interaction.reply({ embeds: [embed], ephemeral: false });
+    }
+
+    // ===== /mettistockdispensa =====
+    if (command === 'mettistockdispensa') {
+      if (!hasAdminRole(member)) {
+        const embed = createEmbed(
+          '❌ Permesso Negato',
+          'Solo Direttore e CEO possono usare questo comando',
+          '#ff0000'
+        );
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      const prodotto = interaction.options.getString('prodotto');
+      const quantita = interaction.options.getInteger('quantita');
+      const nuovoStock = db.aggiungiStockDispensa(prodotto, quantita);
+
+      const embed = createEmbed(
+        '✅ Stock Dispensa Aggiornato',
+        `**${prodotto === 'bevande' ? 'Bevande' : 'Cibo'}** → +${quantita}\n**Nuovo stock:** ${nuovoStock}`,
+        '#00ff00'
+      );
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    // ===== /toglistockdispensa =====
+    if (command === 'toglistockdispensa') {
+      if (!hasAdminRole(member)) {
+        const embed = createEmbed(
+          '❌ Permesso Negato',
+          'Solo Direttore e CEO possono usare questo comando',
+          '#ff0000'
+        );
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+      }
+
+      const prodotto = interaction.options.getString('prodotto');
+      const quantita = interaction.options.getInteger('quantita');
+      const nuovoStock = db.togliStockDispensa(prodotto, quantita);
+
+      const embed = createEmbed(
+        '✅ Stock Dispensa Aggiornato',
+        `**${prodotto === 'bevande' ? 'Bevande' : 'Cibo'}** → -${quantita}\n**Nuovo stock:** ${nuovoStock}`,
+        '#ff6600'
+      );
+      return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     // ===== /stats =====
