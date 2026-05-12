@@ -34,6 +34,111 @@ function createEmbed(title, description, color = '#0099ff') {
     .setFooter({ text: 'BOT GALAZY' });
 }
 
+function createMagazzinoPanel(stock) {
+  const btnPrendiMedikit = new ButtonBuilder()
+    .setCustomId('mag_prendi_medikit')
+    .setLabel('🩺 Prendi Medikit')
+    .setStyle(ButtonStyle.Secondary);
+
+  const btnRimettiMedikit = new ButtonBuilder()
+    .setCustomId('mag_rimetti_medikit')
+    .setLabel('🩺 Rimetti Medikit')
+    .setStyle(ButtonStyle.Success);
+
+  const btnPrendiSoleBende = new ButtonBuilder()
+    .setCustomId('mag_prendi_sole_bende')
+    .setLabel('🩹 Prendi Bende')
+    .setStyle(ButtonStyle.Secondary);
+
+  const btnRimettiSoleBende = new ButtonBuilder()
+    .setCustomId('mag_rimetti_sole_bende')
+    .setLabel('🩹 Rimetti Bende')
+    .setStyle(ButtonStyle.Success);
+
+  const row1 = new ActionRowBuilder().addComponents(btnPrendiMedikit, btnRimettiMedikit);
+  const row2 = new ActionRowBuilder().addComponents(btnPrendiSoleBende, btnRimettiSoleBende);
+
+  const embed = createEmbed(
+    '📦 Magazzino EMS',
+    `**🩺 Medikit:** ${stock.medikit}\n` +
+    `**🩹 Bende:** ${stock.sole_bende}\n\n` +
+    'Usa i pulsanti sotto per prendere o rimettere gli oggetti.',
+    '#3498db'
+  );
+
+  return { embed, components: [row1, row2] };
+}
+
+function createDispensaPanel(stock) {
+  const btnPrendiBevande = new ButtonBuilder()
+    .setCustomId('disp_prendi_bevande')
+    .setLabel('🥤 Prendi Bevande')
+    .setStyle(ButtonStyle.Secondary);
+
+  const btnRimettiBevande = new ButtonBuilder()
+    .setCustomId('disp_rimetti_bevande')
+    .setLabel('🥤 Rimetti Bevande')
+    .setStyle(ButtonStyle.Success);
+
+  const btnPrendiCibo = new ButtonBuilder()
+    .setCustomId('disp_prendi_cibo')
+    .setLabel('🍽️ Prendi Cibo')
+    .setStyle(ButtonStyle.Secondary);
+
+  const btnRimettiCibo = new ButtonBuilder()
+    .setCustomId('disp_rimetti_cibo')
+    .setLabel('🍽️ Rimetti Cibo')
+    .setStyle(ButtonStyle.Success);
+
+  const row1 = new ActionRowBuilder().addComponents(btnPrendiBevande, btnRimettiBevande);
+  const row2 = new ActionRowBuilder().addComponents(btnPrendiCibo, btnRimettiCibo);
+
+  const embed = createEmbed(
+    '🥫 Dispensa',
+    `**🥤 Bevande:** ${stock.bevande}\n` +
+    `**🍽️ Cibo:** ${stock.cibo}`,
+    '#8e44ad'
+  );
+
+  return { embed, components: [row1, row2] };
+}
+
+function createBotMenuPanel() {
+  const btnTimbrareIn = new ButtonBuilder()
+    .setCustomId('btn_timbrare_in')
+    .setLabel('✅ Timbrare IN')
+    .setStyle(ButtonStyle.Success);
+
+  const btnTimbrareOut = new ButtonBuilder()
+    .setCustomId('btn_timbrare_out')
+    .setLabel('❌ Timbrare OUT')
+    .setStyle(ButtonStyle.Danger);
+
+  const btnInfo = new ButtonBuilder()
+    .setCustomId('btn_info')
+    .setLabel('📊 Info')
+    .setStyle(ButtonStyle.Primary);
+
+  const btnServizio = new ButtonBuilder()
+    .setCustomId('btn_servizio')
+    .setLabel('👥 Servizio')
+    .setStyle(ButtonStyle.Primary);
+
+  const row = new ActionRowBuilder().addComponents(btnTimbrareIn, btnTimbrareOut, btnInfo, btnServizio);
+
+  const embed = createEmbed(
+    '🎫 CARTELLINO - BOT GALAZY',
+    '**Benvenuto Medico**\n\nUtilizza i seguenti pulsanti per gestire la timbratura e le statistiche.',
+    '#FFD700'
+  ).addFields(
+    { name: '⏱️ Timbratura', value: 'Registra entrata e uscita dal servizio' },
+    { name: '📊 Info', value: 'Visualizza le tue statistiche' },
+    { name: '👥 Servizio', value: 'Vedi chi è attualmente in servizio' }
+  );
+
+  return { embed, components: [row] };
+}
+
 // ============================================
 // EVENTO: BOT READY
 // ============================================
@@ -320,7 +425,9 @@ client.on('interactionCreate', async (interaction) => {
           isRimetti ? '#00ff00' : '#ffcc00'
         );
 
-        return interaction.reply({ embeds: [embed], ephemeral: false });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
+        const magazzinoPanel = createMagazzinoPanel(stock);
+        return interaction.followUp({ embeds: [magazzinoPanel.embed], components: magazzinoPanel.components, ephemeral: false });
       }
 
       if (interaction.customId.startsWith('modal_dispensa_')) {
@@ -365,7 +472,9 @@ client.on('interactionCreate', async (interaction) => {
           isRimetti ? '#00ff00' : '#ffcc00'
         );
 
-        return interaction.reply({ embeds: [embed], ephemeral: false });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
+        const dispensaPanel = createDispensaPanel(stock);
+        return interaction.followUp({ embeds: [dispensaPanel.embed], components: dispensaPanel.components, ephemeral: false });
       }
 
       if (interaction.customId === 'modal_vendita') {
@@ -481,6 +590,8 @@ Adesso compila i dati della fattura.`,
           '#00ff00'
         );
         await interaction.reply({ embeds: [embed], ephemeral: false });
+        const menuPanel = createBotMenuPanel();
+        return interaction.followUp({ embeds: [menuPanel.embed], components: menuPanel.components, ephemeral: false });
       }
 
 
