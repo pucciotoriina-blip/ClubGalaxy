@@ -279,7 +279,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isModalSubmit()) {
       // Modal Magazzino Prendi/Rimetti
       if (interaction.customId.startsWith('modal_magazzino_')) {
-        const [_, operazione, prodotto] = interaction.customId.split('_');
+        const payload = interaction.customId.replace('modal_magazzino_', '');
+        const [operazione, ...prodottoParts] = payload.split('_');
+        const prodotto = prodottoParts.join('_');
         const isRimetti = operazione === 'rimetti';
         const quantita = parseInt(interaction.fields.getTextInputValue('quantita_magazzino'));
         const nomeProdotti = {
@@ -318,11 +320,13 @@ client.on('interactionCreate', async (interaction) => {
           isRimetti ? '#00ff00' : '#ffcc00'
         );
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
       if (interaction.customId.startsWith('modal_dispensa_')) {
-        const [_, operazione, prodotto] = interaction.customId.split('_');
+        const payload = interaction.customId.replace('modal_dispensa_', '');
+        const [operazione, ...prodottoParts] = payload.split('_');
+        const prodotto = prodottoParts.join('_');
         const isRimetti = operazione === 'rimetti';
         const quantita = parseInt(interaction.fields.getTextInputValue('quantita_dispensa'));
         const nomeProdotti = {
@@ -361,7 +365,7 @@ client.on('interactionCreate', async (interaction) => {
           isRimetti ? '#00ff00' : '#ffcc00'
         );
 
-        return interaction.reply({ embeds: [embed], ephemeral: true });
+        return interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
       if (interaction.customId === 'modal_vendita') {
@@ -382,11 +386,17 @@ client.on('interactionCreate', async (interaction) => {
         // Mostra recap della vendita e apri modulo fattura
         const embed = createEmbed(
           '✅ Vendita Registrata',
-          `**Articolo:** ${cosa}\n**Prezzo:** €${prezzo}\n**Convenzione:** ${convenzione}\n**Società:** ${societa || 'N/D'}\n\nAdesso compila i dati della fattura.`,
+          `**ID Vendita:** \`${vendita.id}\`
+**Articolo:** ${cosa}
+**Prezzo:** €${prezzo}
+**Convenzione:** ${convenzione}
+**Società:** ${societa || 'N/D'}
+
+Adesso compila i dati della fattura.`,
           '#00ff00'
         );
 
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
 
         // Apri modulo fattura
         const modalFattura = new ModalBuilder()
@@ -470,7 +480,7 @@ client.on('interactionCreate', async (interaction) => {
           `**Numero Fattura:** ${numeroFattura}\n**Fattura ID:** \`${fattura.id}\`\n**Articolo:** ${vendita.cosa}\n**Prezzo:** €${vendita.prezzo}\n\nLa fattura è stata registrata e inviata nel canale fatture.`,
           '#00ff00'
         );
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: false });
       }
 
 
